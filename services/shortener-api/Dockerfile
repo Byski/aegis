@@ -10,9 +10,9 @@ RUN mvn -B -q clean package -DskipTests \
     && java -Djarmode=layertools -jar target/shortener-api.jar extract --destination target/extracted
 
 # --- runtime stage -------------------------------------------------------
-FROM eclipse-temurin:21-jre-jammy AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
-RUN groupadd --system app && useradd --system --gid app --home /app app
+RUN addgroup -S app && adduser -S app -G app -h /app
 COPY --from=build /workspace/target/extracted/dependencies/ ./
 COPY --from=build /workspace/target/extracted/spring-boot-loader/ ./
 COPY --from=build /workspace/target/extracted/snapshot-dependencies/ ./
