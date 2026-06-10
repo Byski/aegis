@@ -1,0 +1,45 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*-key.json
+credentials
+
+# Local tooling and editor state
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Build / data artifacts
+dist/
+build/
+*.duckdb
+*.db
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+
+# Kubernetes / local cluster
+kubeconfig
+*.kubeconfig

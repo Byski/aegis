@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Pre-commit gate. Runs the repository hygiene check against staged changes.
+# Activated by: git config core.hooksPath .githooks  (see scripts/bootstrap.sh).
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+exec "$REPO_ROOT/scripts/check-hygiene.sh" --staged
