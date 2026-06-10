@@ -150,10 +150,14 @@ def scan(path, raw):
             if is_emoji(ch):
                 findings.append(f"{path}:{lineno}: emoji not allowed")
                 break
-        for pat in SECRET_PATTERNS:
-            if re.search(pat, line):
-                findings.append(f"{path}:{lineno}: possible secret committed")
-                break
+        # A line may opt out of the secret heuristic with an explicit, auditable
+        # marker. This narrow escape hatch covers documented non-secret defaults
+        # and never disables the disallowed-term, em-dash, or emoji checks.
+        if "hygiene:allow-secret" not in line:
+            for pat in SECRET_PATTERNS:
+                if re.search(pat, line):
+                    findings.append(f"{path}:{lineno}: possible secret committed")
+                    break
     return findings
 
 

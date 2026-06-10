@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: shortener-api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shortener}
+    username: ${SPRING_DATASOURCE_USERNAME:shortener}
+    password: ${SPRING_DATASOURCE_PASSWORD:shortener}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+aegis:
+  jwt:
+    secret: ${AEGIS_JWT_SECRET:local-development-secret-change-me-please-32b}
+    expiry-seconds: ${AEGIS_JWT_EXPIRY_SECONDS:3600}
+  public-base-url: ${AEGIS_PUBLIC_BASE_URL:http://localhost:8080}
+  click-stream: ${AEGIS_CLICK_STREAM:clicks}
+  rate-limit:
+    limit: ${AEGIS_RATELIMIT_LIMIT:100}
+    window-seconds: ${AEGIS_RATELIMIT_WINDOW_SECONDS:60}
+
+# Optional admin bootstrap. When both are set and the user does not yet exist,
+# an ADMIN account is created on startup. Leave unset in environments that do
+# not need it. Never commit real values.
+admin:
+  username: ${AEGIS_ADMIN_USERNAME:}
+  password: ${AEGIS_ADMIN_PASSWORD:}
