@@ -2,6 +2,7 @@
 # Targets are filled in progressively across build phases. Run `make help`.
 
 CLUSTER_NAME ?= aegis
+MONITORING_NS ?= monitoring
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
@@ -19,9 +20,41 @@ bootstrap: ## Install local toolchain and wire git hooks (run once)
 hygiene: ## Run the repository hygiene gate over all tracked files
 	./scripts/check-hygiene.sh --all
 
+.PHONY: images
+images: ## Build both service images locally
+	docker build -t shortener-api:local services/shortener-api
+	docker build -t analytics-svc:local services/analytics-svc
+
+.PHONY: cluster
+cluster: ## Create the kind cluster if it does not exist
+	@kind get clusters | grep -qx $(CLUSTER_NAME) || kind create cluster --config deploy/kind/cluster.yaml
+
+.PHONY: up
+up: cluster images ## Create cluster, build and load images, deploy the chart
+	kind load docker-image shortener-api:local analytics-svc:local --name $(CLUSTER_NAME)
+	helm upgrade --install aegis deploy/helm/aegis \
+		--namespace aegis --create-namespace --wait --timeout 5m
+	@echo "shortener: http://localhost:30080   analytics: http://localhost:30081"
+
+.PHONY: observability
+observability: ## Install kube-prometheus-stack and the aegis observability resources
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+	helm repo add grafana https://grafana.github.io/helm-charts
+	helm repo update
+	helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+		--namespace $(MONITORING_NS) --create-namespace \
+		--set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+		--set prometheus.prometheusSpec.ruleSelectorNilUsesHelmValues=false \
+		--wait --timeout 10m
+	helm upgrade --install aegis-observability deploy/helm/observability \
+		--namespace $(MONITORING_NS)
+	@echo "Grafana: kubectl -n $(MONITORING_NS) port-forward svc/kube-prometheus-stack-grafana 3000:80  (admin / prom-operator)"
+
+.PHONY: down
+down: ## Delete the kind cluster
+	kind delete cluster --name $(CLUSTER_NAME)
+
 # --- Filled in later phases -------------------------------------------------
-# up      : create kind cluster and deploy the stack        (Phase 2)
 # demo    : one-command end-to-end demo                      (Phase 4)
 # load    : run k6 load test                                 (Phase 5)
 # chaos   : run chaos experiment and measure recovery        (Phase 5)
-# down    : tear down the kind cluster                       (Phase 2)

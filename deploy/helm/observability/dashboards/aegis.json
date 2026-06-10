@@ -1,0 +1,76 @@
+{
+  "title": "Aegis Platform",
+  "uid": "aegis-platform",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {
+    "list": [
+      {"name": "DS_PROM", "type": "datasource", "query": "prometheus", "current": {}, "hide": 0}
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Redirect request rate by status",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"refId": "A", "expr": "sum by (status) (rate(http_server_requests_seconds_count{service=\"shortener-api\", uri=\"/{code:[A-Za-z0-9_-]+}\"}[5m]))", "legendFormat": "{{status}}"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Redirect 5xx error ratio vs budget",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "aegis:redirect:error_ratio5m", "legendFormat": "error ratio 5m"},
+        {"refId": "B", "expr": "0.001", "legendFormat": "budget (1 - SLO)"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Redirect latency (p50/p95/p99)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{service=\"shortener-api\", uri=\"/{code:[A-Za-z0-9_-]+}\"}[5m])) by (le))", "legendFormat": "p50"},
+        {"refId": "B", "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{service=\"shortener-api\", uri=\"/{code:[A-Za-z0-9_-]+}\"}[5m])) by (le))", "legendFormat": "p95"},
+        {"refId": "C", "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"shortener-api\", uri=\"/{code:[A-Za-z0-9_-]+}\"}[5m])) by (le))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Redirect availability (5m)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "aegis:redirect:availability5m"}]
+    },
+    {
+      "id": 5,
+      "title": "Fast burn rate (x budget)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+      "targets": [{"refId": "A", "expr": "aegis:redirect:error_ratio5m / 0.001"}]
+    },
+    {
+      "id": 6,
+      "title": "Analytics request rate",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "${DS_PROM}"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [
+        {"refId": "A", "expr": "sum by (handler) (rate(http_requests_total{service=\"analytics-svc\"}[5m]))", "legendFormat": "{{handler}}"}
+      ]
+    }
+  ]
+}

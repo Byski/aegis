@@ -1,0 +1,16 @@
+# Namespace where the aegis application services run.
+appNamespace: aegis
+
+# SLO target for the public redirect path, used by the burn-rate alert rules.
+slo:
+  # Availability objective as a fraction (0.999 = 99.9%).
+  availabilityObjective: 0.999
+  # Latency objective: fraction of redirects faster than the threshold.
+  latencyObjective: 0.99
+  latencyThresholdSeconds: 0.3
+
+otel:
+  image: otel/opentelemetry-collector-contrib:0.116.0
+
+tempo:
+  image: grafana/tempo:2.6.1

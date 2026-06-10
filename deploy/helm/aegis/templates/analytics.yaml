@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-svc
+  labels:
+    {{- include "aegis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: analytics-svc
+spec:
+  replicas: {{ .Values.analytics.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: analytics-svc
+  template:
+    metadata:
+      labels:
+        {{- include "aegis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: analytics-svc
+    spec:
+      containers:
+        - name: analytics-svc
+          image: "{{ .Values.analytics.image.repository }}:{{ .Values.analytics.image.tag }}"
+          imagePullPolicy: {{ .Values.analytics.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.analytics.port }}
+          env:
+            - name: ANALYTICS_REDIS_URL
+              value: "redis://aegis-redis:{{ .Values.redis.port }}/0"
+            - name: ANALYTICS_DUCKDB_PATH
+              value: /data/analytics.duckdb
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.analytics.port }}
+            failureThreshold: 20
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.analytics.port }}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.analytics.port }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.analytics.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-svc
+  labels:
+    {{- include "aegis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: analytics-svc
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/component: analytics-svc
+  ports:
+    - name: http
+      port: {{ .Values.analytics.port }}
+      targetPort: {{ .Values.analytics.port }}
+      nodePort: {{ .Values.analytics.nodePort }}

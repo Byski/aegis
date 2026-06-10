@@ -1,0 +1,14 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: aegis
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Expose the shortener service to the host for the demo and load test.
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      # Expose the analytics service to the host.
+      - containerPort: 30081
+        hostPort: 30081
+        protocol: TCP
