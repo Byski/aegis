@@ -68,11 +68,13 @@ metadata:
   name: shortener-api
   labels:
     {{- include "aegis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shortener-api
 spec:
   type: NodePort
   selector:
     app.kubernetes.io/component: shortener-api
   ports:
-    - port: {{ .Values.shortener.port }}
+    - name: http
+      port: {{ .Values.shortener.port }}
       targetPort: {{ .Values.shortener.port }}
       nodePort: {{ .Values.shortener.nodePort }}

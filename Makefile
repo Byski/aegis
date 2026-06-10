@@ -2,6 +2,7 @@
 # Targets are filled in progressively across build phases. Run `make help`.
 
 CLUSTER_NAME ?= aegis
+MONITORING_NS ?= monitoring
 SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
@@ -34,6 +35,20 @@ up: cluster images ## Create cluster, build and load images, deploy the chart
 	helm upgrade --install aegis deploy/helm/aegis \
 		--namespace aegis --create-namespace --wait --timeout 5m
 	@echo "shortener: http://localhost:30080   analytics: http://localhost:30081"
+
+.PHONY: observability
+observability: ## Install kube-prometheus-stack and the aegis observability resources
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+	helm repo add grafana https://grafana.github.io/helm-charts
+	helm repo update
+	helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+		--namespace $(MONITORING_NS) --create-namespace \
+		--set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+		--set prometheus.prometheusSpec.ruleSelectorNilUsesHelmValues=false \
+		--wait --timeout 10m
+	helm upgrade --install aegis-observability deploy/helm/observability \
+		--namespace $(MONITORING_NS)
+	@echo "Grafana: kubectl -n $(MONITORING_NS) port-forward svc/kube-prometheus-stack-grafana 3000:80  (admin / prom-operator)"
 
 .PHONY: down
 down: ## Delete the kind cluster
