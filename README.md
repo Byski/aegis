@@ -46,12 +46,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for code standards and workflow.
 
 ## Status
 
-Under active construction. Build phases:
+Under active construction. See [docs/roadmap.md](docs/roadmap.md) for remaining
+work and resume notes. Build phases:
 
-- [ ] Phase 0: scaffold and hygiene gate
-- [ ] Phase 1: shortener-api with CI
-- [ ] Phase 2: analytics-svc and local cluster
-- [ ] Phase 3: observability and SLOs
+- [x] Phase 0: scaffold and hygiene gate
+- [x] Phase 1: shortener-api with CI
+- [x] Phase 2: analytics-svc and local cluster
+- [ ] Phase 3: observability and SLOs (metrics, SLOs, alerting, dashboard done; tracing pending)
 - [ ] Phase 4: infrastructure as code, v1
 - [ ] Phase 5: resilience (HPA, chaos, load)
 - [ ] Phase 6: polish
