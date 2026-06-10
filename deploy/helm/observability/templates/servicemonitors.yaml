@@ -1,0 +1,35 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shortener-api
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.appNamespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: shortener-api
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: analytics-svc
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.appNamespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: analytics-svc
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 10s

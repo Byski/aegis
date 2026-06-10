@@ -1,0 +1,79 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aegis-slo
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: aegis-redirect-slo
+      rules:
+        # --- Recording rules: redirect SLIs -------------------------------
+        # Failures are server errors (5xx). A 404 for an unknown code is an
+        # expected outcome, not an availability breach.
+        - record: aegis:redirect:error_ratio5m
+          expr: |
+            (sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}", status=~"5.."}[5m])) or vector(0))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[5m])), 1e-9)
+        - record: aegis:redirect:error_ratio30m
+          expr: |
+            (sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}", status=~"5.."}[30m])) or vector(0))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[30m])), 1e-9)
+        - record: aegis:redirect:error_ratio1h
+          expr: |
+            (sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}", status=~"5.."}[1h])) or vector(0))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[1h])), 1e-9)
+        - record: aegis:redirect:error_ratio6h
+          expr: |
+            (sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}", status=~"5.."}[6h])) or vector(0))
+            /
+            clamp_min(sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[6h])), 1e-9)
+        - record: aegis:redirect:request_rate5m
+          expr: sum(rate(http_server_requests_seconds_count{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[5m]))
+        - record: aegis:redirect:availability5m
+          expr: 1 - aegis:redirect:error_ratio5m
+
+        # --- Multiwindow, multi-burn-rate alerts --------------------------
+        # Error budget = 1 - objective. Fast burn (14.4x) exhausts a 30-day
+        # budget in ~2 days; slow burn (6x) in ~5 days.
+        - alert: RedirectErrorBudgetFastBurn
+          expr: |
+            aegis:redirect:error_ratio5m > (14.4 * (1 - {{ .Values.slo.availabilityObjective }}))
+            and
+            aegis:redirect:error_ratio1h > (14.4 * (1 - {{ .Values.slo.availabilityObjective }}))
+          for: 2m
+          labels:
+            severity: critical
+            slo: redirect-availability
+          annotations:
+            summary: Redirect availability error budget burning fast
+            description: 5m and 1h 5xx error ratio exceed 14.4x the {{ .Values.slo.availabilityObjective }} objective budget.
+        - alert: RedirectErrorBudgetSlowBurn
+          expr: |
+            aegis:redirect:error_ratio30m > (6 * (1 - {{ .Values.slo.availabilityObjective }}))
+            and
+            aegis:redirect:error_ratio6h > (6 * (1 - {{ .Values.slo.availabilityObjective }}))
+          for: 15m
+          labels:
+            severity: warning
+            slo: redirect-availability
+          annotations:
+            summary: Redirect availability error budget burning slowly
+            description: 30m and 6h 5xx error ratio exceed 6x the {{ .Values.slo.availabilityObjective }} objective budget.
+
+        # --- Latency SLO --------------------------------------------------
+        - alert: RedirectHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_server_requests_seconds_bucket{service="shortener-api", uri="/{code:[A-Za-z0-9_-]+}"}[5m])) by (le)
+            ) > {{ .Values.slo.latencyThresholdSeconds }}
+          for: 5m
+          labels:
+            severity: warning
+            slo: redirect-latency
+          annotations:
+            summary: Redirect p99 latency above objective
+            description: p99 redirect latency exceeded {{ .Values.slo.latencyThresholdSeconds }}s over 5m.

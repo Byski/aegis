@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  aegis.json: |
+{{ .Files.Get "dashboards/aegis.json" | indent 4 }}
