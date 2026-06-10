@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shortener-api
+  labels:
+    {{- include "aegis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: shortener-api
+spec:
+  replicas: {{ .Values.shortener.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: shortener-api
+  template:
+    metadata:
+      labels:
+        {{- include "aegis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: shortener-api
+    spec:
+      containers:
+        - name: shortener-api
+          image: "{{ .Values.shortener.image.repository }}:{{ .Values.shortener.image.tag }}"
+          imagePullPolicy: {{ .Values.shortener.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.shortener.port }}
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://aegis-postgres:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.postgres.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-app
+                  key: db-password
+            - name: REDIS_HOST
+              value: aegis-redis
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: AEGIS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-app
+                  key: jwt-secret
+            - name: AEGIS_PUBLIC_BASE_URL
+              value: {{ .Values.shortener.publicBaseUrl | quote }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ .Values.shortener.port }}
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: {{ .Values.shortener.port }}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ .Values.shortener.port }}
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.shortener.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shortener-api
+  labels:
+    {{- include "aegis.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/component: shortener-api
+  ports:
+    - port: {{ .Values.shortener.port }}
+      targetPort: {{ .Values.shortener.port }}
+      nodePort: {{ .Values.shortener.nodePort }}
