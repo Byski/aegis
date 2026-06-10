@@ -1,0 +1,47 @@
+# Default values target a local kind cluster. Credentials here are for local
+# development only; production supplies secrets through externally managed means.
+
+postgres:
+  image: postgres:16-alpine
+  username: shortener
+  database: shortener
+  password: shortener
+  port: 5432
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+
+shortener:
+  image:
+    repository: shortener-api
+    tag: local
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8080
+  nodePort: 30080
+  publicBaseUrl: http://localhost:30080
+  jwtSecret: local-development-signing-key-change-me-32b
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+analytics:
+  image:
+    repository: analytics-svc
+    tag: local
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8000
+  nodePort: 30081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

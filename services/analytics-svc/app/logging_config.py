@@ -1,0 +1,16 @@
+"""Structured JSON logging setup."""
+
+import logging
+
+from pythonjsonlogger.json import JsonFormatter
+
+
+def configure_logging(level: int = logging.INFO) -> None:
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s", rename_fields={"levelname": "level"})
+    )
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(level)
